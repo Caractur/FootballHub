@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Football Stats Tracker (Live)</title>
+    <title>Football Stats Tracker (Password Protected)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -114,6 +114,55 @@
             padding: 0.5rem;
             border-bottom: 1px solid #eee;
         }
+        /* Password modal styles */
+        .password-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .password-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+        .password-input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 1rem 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .password-btn {
+            padding: 0.75rem 1.5rem;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .edit-mode-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .edit-btn, .delete-btn, #add-player, #add-match {
+            display: none; /* Hidden by default */
+        }
     </style>
 </head>
 <body>
@@ -125,6 +174,7 @@
                 <li class="nav-item active" data-page="players">Players</li>
                 <li class="nav-item" data-page="matches">Matches</li>
                 <li class="nav-item" data-page="rankings">Rankings</li>
+                <li class="nav-item" id="edit-mode-btn">Enter Edit Mode</li>
             </ul>
         </div>
 
@@ -184,13 +234,28 @@
         </div>
     </div>
 
+    <!-- Password Modal -->
+    <div id="password-modal" class="password-modal" style="display: none;">
+        <div class="password-box">
+            <h2>Enter Admin Password</h2>
+            <input type="password" id="admin-password" class="password-input" placeholder="Password">
+            <button id="submit-password" class="password-btn">Submit</button>
+            <p id="password-error" style="color: red; margin-top: 1rem;"></p>
+        </div>
+    </div>
+
+    <!-- Edit Mode Indicator -->
+    <div id="edit-mode-indicator" class="edit-mode-indicator" style="display: none;">
+        Edit Mode Active
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
 
     <!-- Main App Logic -->
     <script>
-        // Firebase Configuration - REPLACE WITH YOUR CONFIG
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDOWE6xcXGWxRfIk6yuAHwS9byQCTicYnU",
             authDomain: "footballhub-cb05e.firebaseapp.com",
@@ -211,11 +276,64 @@
         let isLoading = false;
         let currentSort = "name";
         let searchQuery = "";
+        let isEditMode = false;
+        const ADMIN_PASSWORD_REF = db.collection("config").doc("adminPassword");
 
         // DOM Elements
         const statusMessage = document.getElementById('status-message');
         const loadingSpinner = document.createElement('div');
         loadingSpinner.className = 'loading';
+
+        // =================================
+        // Password Protection
+        // =================================
+        function showPasswordModal() {
+            document.getElementById('password-modal').style.display = 'flex';
+            document.getElementById('admin-password').value = '';
+            document.getElementById('password-error').textContent = '';
+        }
+
+        function hidePasswordModal() {
+            document.getElementById('password-modal').style.display = 'none';
+        }
+
+        async function checkPassword() {
+            const password = document.getElementById('admin-password').value;
+            
+            try {
+                const snapshot = await ADMIN_PASSWORD_REF.get();
+                if (snapshot.exists && password === snapshot.data().value) {
+                    isEditMode = true;
+                    hidePasswordModal();
+                    enableEditing();
+                    showStatus("Edit mode enabled");
+                    document.getElementById('edit-mode-indicator').style.display = 'block';
+                    document.getElementById('edit-mode-btn').textContent = 'Exit Edit Mode';
+                } else {
+                    document.getElementById('password-error').textContent = "Incorrect password";
+                }
+            } catch (error) {
+                console.error("Password check failed:", error);
+                document.getElementById('password-error').textContent = "Error verifying password";
+            }
+        }
+
+        function enableEditing() {
+            // Show edit controls
+            document.querySelectorAll('.edit-btn, .delete-btn, #add-player, #add-match').forEach(el => {
+                el.style.display = 'inline-block';
+            });
+        }
+
+        function disableEditing() {
+            isEditMode = false;
+            // Hide edit controls
+            document.querySelectorAll('.edit-btn, .delete-btn, #add-player, #add-match').forEach(el => {
+                el.style.display = 'none';
+            });
+            document.getElementById('edit-mode-indicator').style.display = 'none';
+            document.getElementById('edit-mode-btn').textContent = 'Enter Edit Mode';
+        }
 
         // =================================
         // Core Firebase Functions
@@ -258,7 +376,10 @@
         }
 
         async function saveData() {
-            if (isLoading) return;
+            if (!isEditMode) {
+                showStatus("Enter edit mode to make changes", true);
+                return;
+            }
             
             try {
                 await db.collection("footballData").doc("stats").set({
@@ -266,6 +387,7 @@
                     matches,
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
+                showStatus("Changes saved successfully!");
             } catch (error) {
                 console.error("Error saving data:", error);
                 showStatus("Failed to save data. Check console.", true);
@@ -294,6 +416,11 @@
         // CRUD Operations
         // =================================
         async function addPlayer() {
+            if (!isEditMode) {
+                showStatus("Enter edit mode first", true);
+                return;
+            }
+            
             const name = document.getElementById('player-name').value.trim();
             const goals = parseInt(document.getElementById('player-goals').value) || 0;
             
@@ -311,10 +438,11 @@
             await saveData();
             document.getElementById('player-name').value = '';
             document.getElementById('player-goals').value = '';
-            showStatus("Player added successfully!");
         }
 
         async function deletePlayer(playerId) {
+            if (!isEditMode) return;
+            
             if (!confirm("Delete this player permanently?")) return;
             
             players = players.filter(p => p.id !== playerId);
@@ -328,6 +456,11 @@
         }
 
         async function addMatch() {
+            if (!isEditMode) {
+                showStatus("Enter edit mode first", true);
+                return;
+            }
+            
             const date = document.getElementById('match-date').value;
             if (!date) {
                 showStatus("Please select a date", true);
@@ -390,11 +523,11 @@
                         <div>Goals: ${player.goals}</div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="editPlayerPrompt('${player.id}')" 
+                        <button class="edit-btn" onclick="editPlayerPrompt('${player.id}')" 
                                 style="padding: 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px;">
                             Edit
                         </button>
-                        <button onclick="deletePlayer('${player.id}')" 
+                        <button class="delete-btn" onclick="deletePlayer('${player.id}')" 
                                 style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
                             Delete
                         </button>
@@ -423,13 +556,13 @@
                 matchElement.innerHTML = `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                         <h4>${matchDate}</h4>
-                        <button onclick="deleteMatch('${match.id}')" 
+                        <button class="delete-btn" onclick="deleteMatch('${match.id}')" 
                                 style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
                             Delete
                         </button>
                     </div>
                     <div id="match-players-${match.id}"></div>
-                    <button onclick="addPlayerToMatchPrompt('${match.id}')" 
+                    <button class="edit-btn" onclick="addPlayerToMatchPrompt('${match.id}')" 
                             style="margin-top: 0.5rem; padding: 0.5rem; background: #5bc0de; color: white; border: none; border-radius: 4px;">
                         + Add Player
                     </button>
@@ -526,6 +659,8 @@
         }
 
         function editPlayerPrompt(playerId) {
+            if (!isEditMode) return;
+            
             const player = players.find(p => p.id === playerId);
             if (!player) return;
             
@@ -541,6 +676,8 @@
         }
 
         function addPlayerToMatchPrompt(matchId) {
+            if (!isEditMode) return;
+            
             const match = matches.find(m => m.id === matchId);
             if (!match) return;
             
@@ -576,6 +713,8 @@
         }
 
         async function deleteMatch(matchId) {
+            if (!isEditMode) return;
+            
             if (!confirm("Delete this match permanently?")) return;
             
             matches = matches.filter(m => m.id !== matchId);
@@ -588,19 +727,21 @@
         // =================================
         function setupNavigation() {
             document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    // Update active state
-                    document.querySelectorAll('.nav-item').forEach(nav => {
-                        nav.classList.remove('active');
+                if (item.id !== 'edit-mode-btn') {
+                    item.addEventListener('click', () => {
+                        // Update active state
+                        document.querySelectorAll('.nav-item').forEach(nav => {
+                            nav.classList.remove('active');
+                        });
+                        item.classList.add('active');
+                        
+                        // Show selected page
+                        document.querySelectorAll('.page').forEach(page => {
+                            page.classList.remove('active');
+                        });
+                        document.getElementById(`${item.getAttribute('data-page')}-page`).classList.add('active');
                     });
-                    item.classList.add('active');
-                    
-                    // Show selected page
-                    document.querySelectorAll('.page').forEach(page => {
-                        page.classList.remove('active');
-                    });
-                    document.getElementById(`${item.getAttribute('data-page')}-page`).classList.add('active');
-                });
+                }
             });
         }
 
@@ -612,9 +753,17 @@
             loadData();
             setupRealTimeUpdates();
             
-            // Event Listeners
-            document.getElementById('add-player').addEventListener('click', addPlayer);
-            document.getElementById('add-match').addEventListener('click', addMatch);
+            // Password submission
+            document.getElementById('submit-password').addEventListener('click', checkPassword);
+            
+            // Edit mode toggle
+            document.getElementById('edit-mode-btn').addEventListener('click', () => {
+                if (isEditMode) {
+                    disableEditing();
+                } else {
+                    showPasswordModal();
+                }
+            });
             
             // Search functionality
             document.getElementById('player-search').addEventListener('input', (e) => {
@@ -631,13 +780,13 @@
                     renderPlayers();
                 });
             });
+            
+            // Add player form
+            document.getElementById('add-player').addEventListener('click', addPlayer);
+            
+            // Add match form
+            document.getElementById('add-match').addEventListener('click', addMatch);
         });
-
-        // Make functions available globally for button clicks
-        window.deletePlayer = deletePlayer;
-        window.deleteMatch = deleteMatch;
-        window.addPlayerToMatchPrompt = addPlayerToMatchPrompt;
-        window.editPlayerPrompt = editPlayerPrompt;
     </script>
 </body>
 </html>
