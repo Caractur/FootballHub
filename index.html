@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Football Stats Tracker (Password Protected)</title>
+    <title>Football Stats Tracker</title>
     <style>
         * {
             box-sizing: border-box;
@@ -43,19 +43,6 @@
             margin-bottom: 0.5rem;
             border: 1px solid #eee;
             border-radius: 4px;
-        }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0,0,0,.3);
-            border-radius: 50%;
-            border-top-color: #000;
-            animation: spin 1s ease-in-out infinite;
-            margin-left: 10px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
         }
         #status-message {
             margin: 10px 0;
@@ -114,7 +101,6 @@
             padding: 0.5rem;
             border-bottom: 1px solid #eee;
         }
-        /* Password modal styles */
         .password-modal {
             position: fixed;
             top: 0;
@@ -173,7 +159,10 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .edit-btn, .delete-btn, #add-player, #add-match {
-            display: none; /* Hidden by default */
+            display: none;
+        }
+        .visible {
+            display: inline-block !important;
         }
     </style>
 </head>
@@ -266,7 +255,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
 
-    <!-- Main App Logic -->
     <script>
         // Firebase Configuration
         const firebaseConfig = {
@@ -280,7 +268,7 @@
         };
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
+        const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         // App State
@@ -290,16 +278,12 @@
         let currentSort = "name";
         let searchQuery = "";
         let isEditMode = false;
-        const HARDCODED_PASSWORD = "admin123"; // Change this to your desired password
+        const ADMIN_PASSWORD = "admin123"; // Change this to your desired password
 
         // DOM Elements
         const statusMessage = document.getElementById('status-message');
-        const loadingSpinner = document.createElement('div');
-        loadingSpinner.className = 'loading';
 
-        // =================================
         // Password Protection
-        // =================================
         function showPasswordModal() {
             document.getElementById('password-modal').style.display = 'flex';
             document.getElementById('admin-password').value = '';
@@ -311,46 +295,33 @@
         }
 
         function checkPassword() {
-            const password = document.getElementById('admin-password').value;
-            const errorElement = document.getElementById('password-error');
-            
-            if (password === HARDCODED_PASSWORD) {
+            const enteredPassword = document.getElementById('admin-password').value;
+            if (enteredPassword === ADMIN_PASSWORD) {
                 isEditMode = true;
                 hidePasswordModal();
-                enableEditing();
+                toggleEditControls(true);
                 showStatus("Edit mode enabled");
-                document.getElementById('edit-mode-indicator').style.display = 'block';
-                document.getElementById('edit-mode-btn').textContent = 'Exit Edit Mode';
             } else {
-                errorElement.textContent = "Incorrect password";
+                document.getElementById('password-error').textContent = "Incorrect password";
             }
         }
 
-        function enableEditing() {
-            // Show edit controls
-            document.querySelectorAll('.edit-btn, .delete-btn, #add-player, #add-match').forEach(el => {
-                el.style.display = 'inline-block';
+        function toggleEditControls(show) {
+            const controls = document.querySelectorAll('.edit-btn, .delete-btn, #add-player, #add-match');
+            controls.forEach(control => {
+                if (show) {
+                    control.classList.add('visible');
+                } else {
+                    control.classList.remove('visible');
+                }
             });
+            document.getElementById('edit-mode-indicator').style.display = show ? 'block' : 'none';
+            document.getElementById('edit-mode-btn').textContent = show ? 'Exit Edit Mode' : 'Enter Edit Mode';
         }
 
-        function disableEditing() {
-            isEditMode = false;
-            // Hide edit controls
-            document.querySelectorAll('.edit-btn, .delete-btn, #add-player, #add-match').forEach(el => {
-                el.style.display = 'none';
-            });
-            document.getElementById('edit-mode-indicator').style.display = 'none';
-            document.getElementById('edit-mode-btn').textContent = 'Enter Edit Mode';
-        }
-
-        // =================================
-        // Core Firebase Functions
-        // =================================
+        // Firebase Operations
         async function loadData() {
             showStatus("Loading data...");
-            isLoading = true;
-            document.body.appendChild(loadingSpinner);
-            
             try {
                 const snapshot = await db.collection("footballData").doc("stats").get();
                 if (snapshot.exists) {
@@ -358,29 +329,28 @@
                     players = data.players || [];
                     matches = data.matches || [];
                     
-                    // Ensure all matches have playerGoals array
                     matches.forEach(match => {
                         if (!match.playerGoals) match.playerGoals = [];
                     });
                     
                     showStatus("Data loaded successfully!");
                 } else {
-                    // Initialize empty dataset
-                    await db.collection("footballData").doc("stats").set({
-                        players: [],
-                        matches: [],
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    await initializeDatabase();
                     showStatus("New database initialized");
                 }
                 renderAllData();
             } catch (error) {
                 console.error("Error loading data:", error);
                 showStatus("Failed to load data. Please refresh.", true);
-            } finally {
-                isLoading = false;
-                loadingSpinner.remove();
             }
+        }
+
+        async function initializeDatabase() {
+            await db.collection("footballData").doc("stats").set({
+                players: [],
+                matches: [],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
         }
 
         async function saveData() {
@@ -411,7 +381,6 @@
                     players = data.players || [];
                     matches = data.matches || [];
                     
-                    // Ensure all matches have playerGoals array
                     matches.forEach(match => {
                         if (!match.playerGoals) match.playerGoals = [];
                     });
@@ -420,15 +389,8 @@
                 });
         }
 
-        // =================================
         // CRUD Operations
-        // =================================
         async function addPlayer() {
-            if (!isEditMode) {
-                showStatus("Enter edit mode first", true);
-                return;
-            }
-            
             const name = document.getElementById('player-name').value.trim();
             const goals = parseInt(document.getElementById('player-goals').value) || 0;
             
@@ -449,12 +411,9 @@
         }
 
         async function deletePlayer(playerId) {
-            if (!isEditMode) return;
-            
             if (!confirm("Delete this player permanently?")) return;
             
             players = players.filter(p => p.id !== playerId);
-            // Remove from matches too
             matches.forEach(m => {
                 m.playerGoals = m.playerGoals.filter(pg => pg.playerId !== playerId);
             });
@@ -464,11 +423,6 @@
         }
 
         async function addMatch() {
-            if (!isEditMode) {
-                showStatus("Enter edit mode first", true);
-                return;
-            }
-            
             const date = document.getElementById('match-date').value;
             if (!date) {
                 showStatus("Please select a date", true);
@@ -486,32 +440,18 @@
             showStatus("Match added successfully!");
         }
 
-        // =================================
         // Rendering Functions
-        // =================================
         function renderAllData() {
             renderPlayers();
             renderMatches();
             renderRankings();
         }
 
-        function sortPlayers(playersList, sortBy) {
-            return [...playersList].sort((a, b) => {
-                if (sortBy === "name") {
-                    return a.name.localeCompare(b.name);
-                } else {
-                    return b.goals - a.goals || a.name.localeCompare(b.name);
-                }
-            });
-        }
-
         function renderPlayers() {
             const container = document.getElementById('players-list');
-            
-            // Filter and sort players
             let filteredPlayers = players.filter(player => 
-                player.name.toLowerCase().includes(searchQuery.toLowerCase())
-                || player.goals.toString().includes(searchQuery)
+                player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                player.goals.toString().includes(searchQuery)
             );
             
             filteredPlayers = sortPlayers(filteredPlayers, currentSort);
@@ -531,9 +471,9 @@
                         <div>Goals: ${player.goals}</div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button class="edit-btn" onclick="editPlayerPrompt('${player.id}')" 
+                        <button class="edit-btn" onclick="editPlayerGoals('${player.id}')" 
                                 style="padding: 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px;">
-                            Edit
+                            Edit Goals
                         </button>
                         <button class="delete-btn" onclick="deletePlayer('${player.id}')" 
                                 style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
@@ -543,6 +483,10 @@
                 `;
                 container.appendChild(playerCard);
             });
+            
+            if (isEditMode) {
+                toggleEditControls(true);
+            }
         }
 
         function renderMatches() {
@@ -553,7 +497,6 @@
             }
             
             container.innerHTML = '';
-            // Sort matches by date (newest first)
             const sortedMatches = [...matches].sort((a, b) => new Date(b.date) - new Date(a.date));
             
             sortedMatches.forEach(match => {
@@ -576,10 +519,12 @@
                     </button>
                 `;
                 container.appendChild(matchElement);
-                
-                // Render players for this match
                 renderMatchPlayers(match.id, match.playerGoals);
             });
+            
+            if (isEditMode) {
+                toggleEditControls(true);
+            }
         }
 
         function renderMatchPlayers(matchId, playerGoals) {
@@ -607,18 +552,15 @@
         function renderRankings() {
             const container = document.getElementById('rankings-list');
             
-            // Verify we have data
             if (players.length === 0 || matches.length === 0) {
                 container.innerHTML = '<p>Not enough data to generate rankings</p>';
                 return;
             }
             
-            // Get last 5 matches (sorted newest first)
             const last5Matches = [...matches]
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .slice(0, 5);
             
-            // Calculate player goals
             const playerTotals = {};
             players.forEach(player => {
                 playerTotals[player.id] = {
@@ -635,7 +577,6 @@
                 });
             });
             
-            // Convert to array and sort
             const rankings = Object.values(playerTotals)
                 .filter(player => player.goals > 0)
                 .sort((a, b) => b.goals - a.goals);
@@ -657,29 +598,39 @@
             });
         }
 
-        // =================================
         // Helper Functions
-        // =================================
+        function sortPlayers(playersList, sortBy) {
+            return [...playersList].sort((a, b) => {
+                if (sortBy === "name") {
+                    return a.name.localeCompare(b.name);
+                } else {
+                    return b.goals - a.goals || a.name.localeCompare(b.name);
+                }
+            });
+        }
+
         function showStatus(message, isError = false) {
             statusMessage.textContent = message;
             statusMessage.style.color = isError ? '#d9534f' : '#5cb85c';
             setTimeout(() => statusMessage.textContent = '', 3000);
         }
 
-        function editPlayerPrompt(playerId) {
+        function editPlayerGoals(playerId) {
             if (!isEditMode) return;
             
             const player = players.find(p => p.id === playerId);
             if (!player) return;
             
-            const newName = prompt("Edit player name:", player.name);
-            if (newName === null) return;
-            
-            const newGoals = prompt("Edit goals:", player.goals);
+            const newGoals = prompt(`Edit goals for ${player.name}:`, player.goals);
             if (newGoals === null) return;
             
-            player.name = newName.trim();
-            player.goals = parseInt(newGoals) || 0;
+            const parsedGoals = parseInt(newGoals);
+            if (isNaN(parsedGoals)) {
+                showStatus("Please enter a valid number for goals", true);
+                return;
+            }
+            
+            player.goals = parsedGoals;
             saveData();
         }
 
@@ -721,8 +672,6 @@
         }
 
         async function deleteMatch(matchId) {
-            if (!isEditMode) return;
-            
             if (!confirm("Delete this match permanently?")) return;
             
             matches = matches.filter(m => m.id !== matchId);
@@ -730,20 +679,16 @@
             showStatus("Match deleted");
         }
 
-        // =================================
         // Navigation
-        // =================================
         function setupNavigation() {
             document.querySelectorAll('.nav-item').forEach(item => {
                 if (item.id !== 'edit-mode-btn') {
                     item.addEventListener('click', () => {
-                        // Update active state
                         document.querySelectorAll('.nav-item').forEach(nav => {
                             nav.classList.remove('active');
                         });
                         item.classList.add('active');
                         
-                        // Show selected page
                         document.querySelectorAll('.page').forEach(page => {
                             page.classList.remove('active');
                         });
@@ -753,36 +698,29 @@
             });
         }
 
-        // =================================
         // Initialize App
-        // =================================
         document.addEventListener('DOMContentLoaded', () => {
             setupNavigation();
             loadData();
             setupRealTimeUpdates();
             
-            // Password submission
             document.getElementById('submit-password').addEventListener('click', checkPassword);
-            
-            // Close modal button
             document.getElementById('close-password-modal').addEventListener('click', hidePasswordModal);
             
-            // Edit mode toggle
             document.getElementById('edit-mode-btn').addEventListener('click', () => {
                 if (isEditMode) {
-                    disableEditing();
+                    isEditMode = false;
+                    toggleEditControls(false);
                 } else {
                     showPasswordModal();
                 }
             });
             
-            // Search functionality
             document.getElementById('player-search').addEventListener('input', (e) => {
                 searchQuery = e.target.value;
                 renderPlayers();
             });
             
-            // Sort functionality
             document.querySelectorAll('.sort-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     currentSort = this.getAttribute('data-sort');
@@ -792,12 +730,15 @@
                 });
             });
             
-            // Add player form
             document.getElementById('add-player').addEventListener('click', addPlayer);
-            
-            // Add match form
             document.getElementById('add-match').addEventListener('click', addMatch);
         });
+
+        // Make functions available globally
+        window.editPlayerGoals = editPlayerGoals;
+        window.deletePlayer = deletePlayer;
+        window.addPlayerToMatchPrompt = addPlayerToMatchPrompt;
+        window.deleteMatch = deleteMatch;
     </script>
 </body>
 </html>
