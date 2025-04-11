@@ -128,6 +128,7 @@
             z-index: 1000;
         }
         .password-box {
+            position: relative;
             background: white;
             padding: 2rem;
             border-radius: 8px;
@@ -148,6 +149,17 @@
             border: none;
             border-radius: 4px;
             cursor: pointer;
+        }
+        .close-modal-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
+        .close-modal-btn:hover {
+            color: #000;
         }
         .edit-mode-indicator {
             position: fixed;
@@ -237,6 +249,7 @@
     <!-- Password Modal -->
     <div id="password-modal" class="password-modal" style="display: none;">
         <div class="password-box">
+            <span id="close-password-modal" class="close-modal-btn">&times;</span>
             <h2>Enter Admin Password</h2>
             <input type="password" id="admin-password" class="password-input" placeholder="Password">
             <button id="submit-password" class="password-btn">Submit</button>
@@ -277,7 +290,7 @@
         let currentSort = "name";
         let searchQuery = "";
         let isEditMode = false;
-        const ADMIN_PASSWORD_REF = db.collection("config").doc("adminPassword");
+        const HARDCODED_PASSWORD = "admin123"; // Change this to your desired password
 
         // DOM Elements
         const statusMessage = document.getElementById('status-message');
@@ -297,24 +310,19 @@
             document.getElementById('password-modal').style.display = 'none';
         }
 
-        async function checkPassword() {
+        function checkPassword() {
             const password = document.getElementById('admin-password').value;
+            const errorElement = document.getElementById('password-error');
             
-            try {
-                const snapshot = await ADMIN_PASSWORD_REF.get();
-                if (snapshot.exists && password === snapshot.data().value) {
-                    isEditMode = true;
-                    hidePasswordModal();
-                    enableEditing();
-                    showStatus("Edit mode enabled");
-                    document.getElementById('edit-mode-indicator').style.display = 'block';
-                    document.getElementById('edit-mode-btn').textContent = 'Exit Edit Mode';
-                } else {
-                    document.getElementById('password-error').textContent = "Incorrect password";
-                }
-            } catch (error) {
-                console.error("Password check failed:", error);
-                document.getElementById('password-error').textContent = "Error verifying password";
+            if (password === HARDCODED_PASSWORD) {
+                isEditMode = true;
+                hidePasswordModal();
+                enableEditing();
+                showStatus("Edit mode enabled");
+                document.getElementById('edit-mode-indicator').style.display = 'block';
+                document.getElementById('edit-mode-btn').textContent = 'Exit Edit Mode';
+            } else {
+                errorElement.textContent = "Incorrect password";
             }
         }
 
@@ -755,6 +763,9 @@
             
             // Password submission
             document.getElementById('submit-password').addEventListener('click', checkPassword);
+            
+            // Close modal button
+            document.getElementById('close-password-modal').addEventListener('click', hidePasswordModal);
             
             // Edit mode toggle
             document.getElementById('edit-mode-btn').addEventListener('click', () => {
