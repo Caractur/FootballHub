@@ -1,3 +1,23 @@
+<!-- Add to <head> -->
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+
+<!-- Add right before </body> -->
+<script>
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyDOWE6xcXGWxRfIk6yuAHwS9byQCTicYnU",
+    authDomain: "footballhub-cb05e.firebaseapp.com",
+    projectId: "footballhub-cb05e",
+    storageBucket: "footballhub-cb05e.appspot.com",
+    messagingSenderId: "954621852371",
+    appId: "1:954621852371:web:3822d2208b9ebe934af226",
+    measurementId: "G-5SNF7FOWTG"
+  };
+  
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
