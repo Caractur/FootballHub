@@ -79,6 +79,41 @@
         .page.active {
             display: block;
         }
+        .player-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        #player-search {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex: 1;
+            max-width: 300px;
+        }
+        .sort-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .sort-btn {
+            padding: 0.5rem 1rem;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .sort-btn.active {
+            background: #333;
+            color: white;
+        }
+        .match-player {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
@@ -111,6 +146,13 @@
                 </div>
                 <div class="card">
                     <h3>Player Roster</h3>
+                    <div class="player-controls">
+                        <input type="text" id="player-search" placeholder="Search players...">
+                        <div class="sort-options">
+                            <button class="sort-btn active" data-sort="name">A-Z</button>
+                            <button class="sort-btn" data-sort="goals">Top Scorers</button>
+                        </div>
+                    </div>
                     <div id="players-list"></div>
                 </div>
             </div>
@@ -148,7 +190,7 @@
 
     <!-- Main App Logic -->
     <script>
-        // Firebase Configuration
+        // Firebase Configuration - REPLACE WITH YOUR CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyDOWE6xcXGWxRfIk6yuAHwS9byQCTicYnU",
             authDomain: "footballhub-cb05e.firebaseapp.com",
@@ -167,6 +209,8 @@
         let players = [];
         let matches = [];
         let isLoading = false;
+        let currentSort = "name";
+        let searchQuery = "";
 
         // DOM Elements
         const statusMessage = document.getElementById('status-message');
@@ -187,6 +231,12 @@
                     const data = snapshot.data();
                     players = data.players || [];
                     matches = data.matches || [];
+                    
+                    // Ensure all matches have playerGoals array
+                    matches.forEach(match => {
+                        if (!match.playerGoals) match.playerGoals = [];
+                    });
+                    
                     showStatus("Data loaded successfully!");
                 } else {
                     // Initialize empty dataset
@@ -230,6 +280,12 @@
                     const data = snapshot.data();
                     players = data.players || [];
                     matches = data.matches || [];
+                    
+                    // Ensure all matches have playerGoals array
+                    matches.forEach(match => {
+                        if (!match.playerGoals) match.playerGoals = [];
+                    });
+                    
                     renderAllData();
                 });
         }
@@ -298,15 +354,34 @@
             renderRankings();
         }
 
+        function sortPlayers(playersList, sortBy) {
+            return [...playersList].sort((a, b) => {
+                if (sortBy === "name") {
+                    return a.name.localeCompare(b.name);
+                } else {
+                    return b.goals - a.goals || a.name.localeCompare(b.name);
+                }
+            });
+        }
+
         function renderPlayers() {
             const container = document.getElementById('players-list');
-            if (players.length === 0) {
-                container.innerHTML = '<p>No players added yet</p>';
+            
+            // Filter and sort players
+            let filteredPlayers = players.filter(player => 
+                player.name.toLowerCase().includes(searchQuery.toLowerCase())
+                || player.goals.toString().includes(searchQuery)
+            );
+            
+            filteredPlayers = sortPlayers(filteredPlayers, currentSort);
+            
+            if (filteredPlayers.length === 0) {
+                container.innerHTML = '<p>No players found</p>';
                 return;
             }
             
             container.innerHTML = '';
-            players.forEach(player => {
+            filteredPlayers.forEach(player => {
                 const playerCard = document.createElement('div');
                 playerCard.className = 'player-card';
                 playerCard.innerHTML = `
@@ -315,8 +390,14 @@
                         <div>Goals: ${player.goals}</div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="editPlayerPrompt('${player.id}')" style="padding: 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px;">Edit</button>
-                        <button onclick="deletePlayer('${player.id}')" style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">Delete</button>
+                        <button onclick="editPlayerPrompt('${player.id}')" 
+                                style="padding: 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px;">
+                            Edit
+                        </button>
+                        <button onclick="deletePlayer('${player.id}')" 
+                                style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
+                            Delete
+                        </button>
                     </div>
                 `;
                 container.appendChild(playerCard);
@@ -342,10 +423,16 @@
                 matchElement.innerHTML = `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                         <h4>${matchDate}</h4>
-                        <button onclick="deleteMatch('${match.id}')" style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">Delete</button>
+                        <button onclick="deleteMatch('${match.id}')" 
+                                style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
+                            Delete
+                        </button>
                     </div>
                     <div id="match-players-${match.id}"></div>
-                    <button onclick="addPlayerToMatchPrompt('${match.id}')" style="margin-top: 0.5rem; padding: 0.5rem; background: #5bc0de; color: white; border: none; border-radius: 4px;">+ Add Player</button>
+                    <button onclick="addPlayerToMatchPrompt('${match.id}')" 
+                            style="margin-top: 0.5rem; padding: 0.5rem; background: #5bc0de; color: white; border: none; border-radius: 4px;">
+                        + Add Player
+                    </button>
                 `;
                 container.appendChild(matchElement);
                 
@@ -367,10 +454,7 @@
                 if (!player) return;
                 
                 const playerElement = document.createElement('div');
-                playerElement.style.display = 'flex';
-                playerElement.style.justifyContent = 'space-between';
-                playerElement.style.padding = '0.5rem';
-                playerElement.style.borderBottom = '1px solid #eee';
+                playerElement.className = 'match-player';
                 playerElement.innerHTML = `
                     <div>${player.name}</div>
                     <div>Goals: ${pg.goals}</div>
@@ -382,26 +466,37 @@
         function renderRankings() {
             const container = document.getElementById('rankings-list');
             
-            // Get last 5 matches
+            // Verify we have data
+            if (players.length === 0 || matches.length === 0) {
+                container.innerHTML = '<p>Not enough data to generate rankings</p>';
+                return;
+            }
+            
+            // Get last 5 matches (sorted newest first)
             const last5Matches = [...matches]
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .slice(0, 5);
             
             // Calculate player goals
-            const playerGoals = {};
-            players.forEach(p => playerGoals[p.id] = { name: p.name, goals: 0 });
+            const playerTotals = {};
+            players.forEach(player => {
+                playerTotals[player.id] = {
+                    name: player.name,
+                    goals: 0
+                };
+            });
             
             last5Matches.forEach(match => {
                 match.playerGoals.forEach(pg => {
-                    if (playerGoals[pg.playerId]) {
-                        playerGoals[pg.playerId].goals += pg.goals;
+                    if (playerTotals[pg.playerId]) {
+                        playerTotals[pg.playerId].goals += pg.goals;
                     }
                 });
             });
             
             // Convert to array and sort
-            const rankings = Object.values(playerGoals)
-                .filter(p => p.goals > 0)
+            const rankings = Object.values(playerTotals)
+                .filter(player => player.goals > 0)
                 .sort((a, b) => b.goals - a.goals);
             
             if (rankings.length === 0) {
@@ -412,13 +507,9 @@
             container.innerHTML = '';
             rankings.forEach((player, index) => {
                 const rankElement = document.createElement('div');
-                rankElement.style.display = 'flex';
-                rankElement.style.alignItems = 'center';
-                rankElement.style.padding = '0.5rem';
-                rankElement.style.borderBottom = '1px solid #eee';
+                rankElement.className = 'match-player';
                 rankElement.innerHTML = `
-                    <div style="width: 30px; text-align: center; font-weight: bold;">${index + 1}.</div>
-                    <div style="flex: 1;">${player.name}</div>
+                    <div><strong>${index + 1}.</strong> ${player.name}</div>
                     <div>${player.goals} goals</div>
                 `;
                 container.appendChild(rankElement);
@@ -462,9 +553,8 @@
                 return;
             }
             
-            const playerSelect = prompt(
-                `Select player:\n${availablePlayers.map((p, i) => `${i+1}. ${p.name}`).join('\n')}`
-            );
+            let playerList = availablePlayers.map((p, i) => `${i+1}. ${p.name}`).join('\n');
+            const playerSelect = prompt(`Select player:\n${playerList}`);
             
             if (!playerSelect) return;
             
@@ -525,6 +615,22 @@
             // Event Listeners
             document.getElementById('add-player').addEventListener('click', addPlayer);
             document.getElementById('add-match').addEventListener('click', addMatch);
+            
+            // Search functionality
+            document.getElementById('player-search').addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                renderPlayers();
+            });
+            
+            // Sort functionality
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentSort = this.getAttribute('data-sort');
+                    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    renderPlayers();
+                });
+            });
         });
 
         // Make functions available globally for button clicks
