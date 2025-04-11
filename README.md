@@ -1,6 +1,7 @@
 # ⚽ Football Stats Tracker
 
-![App Preview](screenshot.png)
+![image](https://github.com/user-attachments/assets/48a1f526-54c8-4fe1-a1de-ef9b9541d1f1)
+
 
 A complete web application for tracking football team statistics with real-time Firebase integration.
 
