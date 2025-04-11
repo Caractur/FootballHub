@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Stats Tracker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            background-color: #f8f8f8;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        /* Layout */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background-color: #222;
+            color: #fff;
+            padding: 2rem 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-header {
+            padding: 0 1.5rem 1.5rem;
+            border-bottom: 1px solid #444;
+            margin-bottom: 1.5rem;
+        }
+        
+        .sidebar-header h2 {
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .nav-menu {
+            list-style: none;
+        }
+        
+        .nav-item {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .nav-item:hover {
+            background-color: #333;
+        }
+        
+        .nav-item.active {
+            background-color: #444;
+            border-left: 3px solid #fff;
+        }
+        
+        .nav-item i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .page-header h1 {
+            font-weight: 600;
+            font-size: 1.8rem;
+        }
+        
+        /* Cards */
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .card-header h3 {
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #999;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #333;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #444;
+        }
+        
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        /* Player Cards */
+        .player-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .player-card {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 6px;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .player-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .player-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #333;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .player-info {
+            flex: 1;
+        }
+        
+        .player-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .player-stats {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .player-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        /* Match Cards */
+        .match-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .match-card {
+            position: relative;
+        }
+        
+        .match-date {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 0.5rem;
+        }
+        
+        .match-players {
+            margin-top: 1rem;
+        }
+        
+        .player-goal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f9f9f9;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .player-goal-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .player-goal-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #333;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-right: 0.75rem;
+        }
+        
+        /* Rankings */
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .rank-badge {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #333;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .rank-1 .rank-badge {
+            background-color: #222;
+        }
+        
+        .rank-2 .rank-badge {
+            background-color: #444;
+        }
+        
+        .rank-3 .rank-badge {
+            background-color: #666;
+        }
+        
+        .ranking-player {
+            flex: 1;
+        }
+        
+        .ranking-player-name {
+            font-weight: 600;
+        }
+        
+        .ranking-player-goals {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: #fff;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transform: translateY(-20px);
+            transition: transform 0.3s;
+        }
+        
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-header h2 {
+            font-weight: 600;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        /* Utility Classes */
+        .text-muted {
+            color: #777;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .mt-3 {
+            margin-top: 1rem;
+        }
+        
+        .mb-3 {
+            margin-bottom: 1rem;
+        }
+        
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: #777;
+        }
+        
+        /* Icons (using Unicode as simple fallback) */
+        .icon::before {
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        
+        .icon-player::before {
+            content: "👤";
+        }
+        
+        .icon-match::before {
+            content: "⚽";
+        }
+        
+        .icon-ranking::before {
+            content: "🏆";
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                padding: 1rem;
+            }
+            
+            .nav-menu {
+                display: flex;
+                overflow-x: auto;
+            }
+            
+            .nav-item {
+                white-space: nowrap;
+            }
+            
+            .main-content {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Football Stats</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item active" data-page="players">
+                    <span class="icon icon-player"></span>
+                    Players
+                </li>
+                <li class="nav-item" data-page="matches">
+                    <span class="icon icon-match"></span>
+                    Matches
+                </li>
+                <li class="nav-item" data-page="rankings">
+                    <span class="icon icon-ranking"></span>
+                    Rankings
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <!-- Players Page -->
+            <div class="page active" id="players">
+                <div class="page-header">
+                    <h1>Players</h1>
+                    <div class="sort-options">
+                        <button class="btn btn-secondary btn-sm" id="sort-name">Sort by Name</button>
+                        <button class="btn btn-secondary btn-sm" id="sort-goals">Sort by Goals</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Add New Player</h3>
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="player-name" class="form-control" placeholder="Player name">
+                        <input type="number" id="player-goals" class="form-control" placeholder="Goals" min="0">
+                        <button class="btn btn-primary" id="add-player">Add Player</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Player Roster</h3>
+                    </div>
+                    <div id="players-list">
+                        <div class="empty-state">No players added yet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matches Page -->
+            <div class="page" id="matches">
+                <div class="page-header">
+                    <h1>Matches</h1>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Add New Match</h3>
+                    </div>
+                    <div class="form-row">
+                        <input type="date" id="match-date" class="form-control">
+                        <button class="btn btn-primary" id="add-match">Add Match</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Match History</h3>
+                    </div>
+                    <div class="match-list" id="matches-list">
+                        <div class="empty-state">No matches added yet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rankings Page -->
+            <div class="page" id="rankings">
+                <div class="page-header">
+                    <h1>Rankings</h1>
+                    <div class="text-muted">Top performers from last 5 matches</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Top Scorers</h3>
+                    </div>
+                    <div class="ranking-list" id="rankings-list">
+                        <div class="empty-state">Not enough data to generate rankings</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Player Modal -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Player</h2>
+            </div>
+            <div class="form-group">
+                <label for="edit-name" class="mb-3">Player Name</label>
+                <input type="text" id="edit-name" class="form-control" placeholder="Player name">
+            </div>
+            <div class="form-group">
+                <label for="edit-goals" class="mb-3">Goals</label>
+                <input type="number" id="edit-goals" class="form-control" placeholder="Goals" min="0">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-edit">Cancel</button>
+                <button class="btn btn-primary" id="save-edit">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data storage
+        let players = JSON.parse(localStorage.getItem('players')) || [];
+        let matches = JSON.parse(localStorage.getItem('matches')) || [];
+        let currentPlayerId = null;
+        let currentEditMatchId = null;
+
+        // DOM elements
+        const pages = document.querySelectorAll('.page');
+        const navItems = document.querySelectorAll('.nav-item');
+        const playersList = document.getElementById('players-list');
+        const matchesList = document.getElementById('matches-list');
+        const rankingsList = document.getElementById('rankings-list');
+        const addPlayerBtn = document.getElementById('add-player');
+        const playerNameInput = document.getElementById('player-name');
+        const playerGoalsInput = document.getElementById('player-goals');
+        const addMatchBtn = document.getElementById('add-match');
+        const matchDateInput = document.getElementById('match-date');
+        const sortNameBtn = document.getElementById('sort-name');
+        const sortGoalsBtn = document.getElementById('sort-goals');
+        const editModal = document.getElementById('edit-modal');
+        const editNameInput = document.getElementById('edit-name');
+        const editGoalsInput = document.getElementById('edit-goals');
+        const cancelEditBtn = document.getElementById('cancel-edit');
+        const saveEditBtn = document.getElementById('save-edit');
+
+        // Initialize the app
+        function init() {
+            renderPlayers();
+            renderMatches();
+            renderRankings();
+            setupEventListeners();
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Sidebar navigation
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    navItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    const pageId = item.getAttribute('data-page');
+                    pages.forEach(page => {
+                        page.classList.remove('active');
+                        if (page.id === pageId) {
+                            page.classList.add('active');
+                        }
+                    });
+                });
+            });
+
+            // Add player
+            addPlayerBtn.addEventListener('click', addPlayer);
+
+            // Add match
+            addMatchBtn.addEventListener('click', addMatch);
+
+            // Sort players
+            sortNameBtn.addEventListener('click', () => sortPlayers('name'));
+            sortGoalsBtn.addEventListener('click', () => sortPlayers('goals'));
+
+            // Modal buttons
+            cancelEditBtn.addEventListener('click', closeModal);
+            saveEditBtn.addEventListener('click', savePlayerEdit);
+        }
+
+        // Modal functions
+        function openModal() {
+            editModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            editModal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Player functions
+        function renderPlayers() {
+            if (players.length === 0) {
+                playersList.innerHTML = '<div class="empty-state">No players added yet</div>';
+                return;
+            }
+            
+            playersList.innerHTML = '<div class="player-grid"></div>';
+            const playerGrid = playersList.querySelector('.player-grid');
+            
+            players.forEach(player => {
+                const playerCard = document.createElement('div');
+                playerCard.className = 'player-card';
+                playerCard.innerHTML = `
+                    <div class="player-avatar">${player.name.charAt(0).toUpperCase()}</div>
+                    <div class="player-info">
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-stats">Goals: ${player.goals}</div>
+                    </div>
+                    <div class="player-actions">
+                        <button class="btn btn-secondary btn-sm" data-id="${player.id}">Edit</button>
+                        <button class="btn btn-danger btn-sm" data-id="${player.id}">Delete</button>
+                    </div>
+                `;
+                playerGrid.appendChild(playerCard);
+            });
+            
+            // Add event listeners to edit and delete buttons
+            document.querySelectorAll('.player-actions .btn-secondary').forEach(btn => {
+                btn.addEventListener('click', (e) => openEditModal(e.target.getAttribute('data-id')));
+            });
+            
+            document.querySelectorAll('.player-actions .btn-danger').forEach(btn => {
+                btn.addEventListener('click', (e) => deletePlayer(e.target.getAttribute('data-id')));
+            });
+        }
+
+        function addPlayer() {
+            const name = playerNameInput.value.trim();
+            const goals = parseInt(playerGoalsInput.value) || 0;
+            
+            if (!name) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const newPlayer = {
+                id: Date.now(),
+                name,
+                goals
+            };
+            
+            players.push(newPlayer);
+            savePlayers();
+            playerNameInput.value = '';
+            playerGoalsInput.value = '';
+            renderPlayers();
+            renderRankings();
+        }
+
+        function openEditModal(playerId) {
+            const player = players.find(p => p.id === parseInt(playerId));
+            if (!player) return;
+            
+            currentPlayerId = player.id;
+            editNameInput.value = player.name;
+            editGoalsInput.value = player.goals;
+            openModal();
+        }
+
+        function savePlayerEdit() {
+            const name = editNameInput.value.trim();
+            const goals = parseInt(editGoalsInput.value) || 0;
+            
+            if (!name) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const playerIndex = players.findIndex(p => p.id === currentPlayerId);
+            if (playerIndex !== -1) {
+                players[playerIndex].name = name;
+                players[playerIndex].goals = goals;
+                savePlayers();
+                renderPlayers();
+                renderMatches();
+                renderRankings();
+                closeModal();
+            }
+        }
+
+        function deletePlayer(playerId) {
+            if (confirm('Are you sure you want to delete this player?')) {
+                players = players.filter(p => p.id !== parseInt(playerId));
+                savePlayers();
+                
+                // Remove player from matches
+                matches.forEach(match => {
+                    match.playerGoals = match.playerGoals.filter(pg => pg.playerId !== parseInt(playerId));
+                });
+                saveMatches();
+                
+                renderPlayers();
+                renderMatches();
+                renderRankings();
+            }
+        }
+
+        function sortPlayers(by) {
+            if (by === 'name') {
+                players.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (by === 'goals') {
+                players.sort((a, b) => b.goals - a.goals);
+            }
+            renderPlayers();
+        }
+
+        // Match functions
+        function renderMatches() {
+            if (matches.length === 0) {
+                matchesList.innerHTML = '<div class="empty-state">No matches added yet</div>';
+                return;
+            }
+            
+            matchesList.innerHTML = '';
+            
+            // Sort matches by date (newest first)
+            const sortedMatches = [...matches].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            sortedMatches.forEach(match => {
+                const matchCard = document.createElement('div');
+                matchCard.className = 'match-card';
+                
+                const matchDate = new Date(match.date);
+                const dateString = matchDate.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                
+                matchCard.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>${dateString}</h3>
+                            <button class="btn btn-danger btn-sm" data-id="${match.id}">Delete</button>
+                        </div>
+                        <div class="match-players" id="match-players-${match.id}">
+                            ${renderMatchPlayers(match.playerGoals, match.id)}
+                        </div>
+                        <button class="btn btn-secondary btn-sm mt-3" data-id="${match.id}">+ Add Player to Match</button>
+                    </div>
+                `;
+                
+                matchesList.appendChild(matchCard);
+            });
+            
+            // Add event listeners to delete buttons
+            document.querySelectorAll('.match-card .btn-danger').forEach(btn => {
+                btn.addEventListener('click', (e) => deleteMatch(e.target.getAttribute('data-id')));
+            });
+            
+            // Add event listeners to "Add Player" buttons
+            document.querySelectorAll('.match-card .btn-secondary').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    currentEditMatchId = e.target.getAttribute('data-id');
+                    addPlayerToMatch(currentEditMatchId);
+                });
+            });
+        }
+
+        function renderMatchPlayers(playerGoals, matchId) {
+            if (playerGoals.length === 0) {
+                return '<div class="empty-state">No players in this match</div>';
+            }
+            
+            let html = '';
+            playerGoals.forEach(pg => {
+                const player = players.find(p => p.id === pg.playerId);
+                if (player) {
+                    html += `
+                        <div class="player-goal-item">
+                            <div class="player-goal-info">
+                                <div class="player-goal-avatar">${player.name.charAt(0).toUpperCase()}</div>
+                                <div>
+                                    <div class="player-name">${player.name}</div>
+                                    <div class="player-stats">Goals: ${pg.goals}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-secondary btn-sm" data-match-id="${matchId}" data-player-id="${pg.playerId}">Edit</button>
+                                <button class="btn btn-danger btn-sm" data-match-id="${matchId}" data-player-id="${pg.playerId}">Remove</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            return html;
+        }
+
+        function addMatch() {
+            const date = matchDateInput.value;
+            
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+            
+            const newMatch = {
+                id: Date.now(),
+                date,
+                playerGoals: []
+            };
+            
+            matches.push(newMatch);
+            saveMatches();
+            matchDateInput.value = '';
+            renderMatches();
+            renderRankings();
+        }
+
+        function deleteMatch(matchId) {
+            if (confirm('Are you sure you want to delete this match?')) {
+                matches = matches.filter(m => m.id !== parseInt(matchId));
+                saveMatches();
+                renderMatches();
+                renderRankings();
+            }
+        }
+
+        function addPlayerToMatch(matchId) {
+            const match = matches.find(m => m.id === parseInt(matchId));
+            if (!match) return;
+            
+            if (players.length === 0) {
+                alert('No players available. Please add players first.');
+                return;
+            }
+            
+            // Find players not already in this match
+            const availablePlayers = players.filter(player => 
+                !match.playerGoals.some(pg => pg.playerId === player.id)
+            );
+            
+            if (availablePlayers.length === 0) {
+                alert('All players are already in this match.');
+                return;
+            }
+            
+            const container = document.createElement('div');
+            container.className = 'card mt-3';
+            container.innerHTML = `
+                <div class="card-header">
+                    <h3>Add Player to Match</h3>
+                </div>
+                <div class="form-row" style="padding: 1rem;">
+                    <select id="match-player-select" class="form-control">
+                        ${availablePlayers.map(player => 
+                            `<option value="${player.id}">${player.name}</option>`
+                        ).join('')}
+                    </select>
+                    <input type="number" id="match-player-goals" class="form-control" placeholder="Goals" min="0" value="0" style="width: 100px;">
+                    <button class="btn btn-primary" id="confirm-add-player">Add</button>
+                    <button class="btn btn-secondary" id="cancel-add-player">Cancel</button>
+                </div>
+            `;
+            
+            const matchPlayersDiv = document.querySelector(`#match-players-${matchId}`);
+            matchPlayersDiv.appendChild(container);
+            
+            document.getElementById('confirm-add-player').addEventListener('click', () => {
+                const playerId = parseInt(document.getElementById('match-player-select').value);
+                const goals = parseInt(document.getElementById('match-player-goals').value) || 0;
+                
+                match.playerGoals.push({
+                    matchId: match.id,
+                    playerId,
+                    goals
+                });
+                
+                saveMatches();
+                renderMatches();
+                renderRankings();
+            });
+            
+            document.getElementById('cancel-add-player').addEventListener('click', () => {
+                container.remove();
+            });
+        }
+
+        // Ranking functions
+        function renderRankings() {
+            if (matches.length === 0 || players.length === 0) {
+                rankingsList.innerHTML = '<div class="empty-state">Not enough data to generate rankings</div>';
+                return;
+            }
+            
+            // Get last 5 matches (sorted by date)
+            const last5Matches = [...matches]
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 5);
+            
+            // Calculate total goals for each player in these matches
+            const playerTotals = {};
+            
+            players.forEach(player => {
+                playerTotals[player.id] = {
+                    name: player.name,
+                    goals: 0
+                };
+            });
+            
+            last5Matches.forEach(match => {
+                match.playerGoals.forEach(pg => {
+                    if (playerTotals[pg.playerId]) {
+                        playerTotals[pg.playerId].goals += pg.goals;
+                    }
+                });
+            });
+            
+            // Convert to array and sort by goals
+            const rankings = Object.values(playerTotals)
+                .filter(player => player.goals > 0)
+                .sort((a, b) => b.goals - a.goals);
+            
+            if (rankings.length === 0) {
+                rankingsList.innerHTML = '<div class="empty-state">No goals scored in the last 5 matches</div>';
+                return;
+            }
+            
+            rankingsList.innerHTML = '';
+            
+            rankings.forEach((player, index) => {
+                const rankItem = document.createElement('div');
+                rankItem.className = `ranking-item rank-${index + 1}`;
+                rankItem.innerHTML = `
+                    <div class="rank-badge">${index + 1}</div>
+                    <div class="player-avatar">${player.name.charAt(0).toUpperCase()}</div>
+                    <div class="ranking-player">
+                        <div class="ranking-player-name">${player.name}</div>
+                        <div class="ranking-player-goals">${player.goals} goals</div>
+                    </div>
+                `;
+                rankingsList.appendChild(rankItem);
+            });
+        }
+
+        // Storage functions
+        function savePlayers() {
+            localStorage.setItem('players', JSON.stringify(players));
+        }
+
+        function saveMatches() {
+            localStorage.setItem('matches', JSON.stringify(matches));
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
