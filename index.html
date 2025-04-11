@@ -63,24 +63,43 @@
             color: #d9534f;
             font-weight: 500;
         }
+        .nav-item {
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+        }
+        .nav-item:hover {
+            background-color: #333;
+        }
+        .nav-item.active {
+            background-color: #444;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <div class="sidebar">
-            <h2 style="padding: 0 1.5rem;">Football Stats</h2>
+            <h2 style="padding: 0 1.5rem 1.5rem; border-bottom: 1px solid #444;">Football Stats</h2>
             <ul style="list-style: none; padding: 0;">
-                <li style="padding: 0.8rem 1.5rem; cursor: pointer;" data-page="players">Players</li>
-                <li style="padding: 0.8rem 1.5rem; cursor: pointer;" data-page="matches">Matches</li>
-                <li style="padding: 0.8rem 1.5rem; cursor: pointer;" data-page="rankings">Rankings</li>
+                <li class="nav-item active" data-page="players">Players</li>
+                <li class="nav-item" data-page="matches">Matches</li>
+                <li class="nav-item" data-page="rankings">Rankings</li>
             </ul>
         </div>
 
         <!-- Main Content -->
         <div class="main-content">
+            <!-- Status Message -->
+            <div id="status-message"></div>
+
             <!-- Players Page -->
-            <div id="players-page">
+            <div id="players-page" class="page active">
                 <h1>Players</h1>
                 <div class="card">
                     <h3>Add New Player</h3>
@@ -96,8 +115,8 @@
                 </div>
             </div>
 
-            <!-- Matches Page (hidden by default) -->
-            <div id="matches-page" style="display: none;">
+            <!-- Matches Page -->
+            <div id="matches-page" class="page">
                 <h1>Matches</h1>
                 <div class="card">
                     <h3>Add New Match</h3>
@@ -112,17 +131,14 @@
                 </div>
             </div>
 
-            <!-- Rankings Page (hidden by default) -->
-            <div id="rankings-page" style="display: none;">
+            <!-- Rankings Page -->
+            <div id="rankings-page" class="page">
                 <h1>Rankings</h1>
                 <div class="card">
                     <h3>Top Scorers (Last 5 Matches)</h3>
                     <div id="rankings-list"></div>
                 </div>
             </div>
-
-            <!-- Status Message -->
-            <div id="status-message"></div>
         </div>
     </div>
 
@@ -132,7 +148,7 @@
 
     <!-- Main App Logic -->
     <script>
-        // Firebase Configuration (use your actual config)
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDOWE6xcXGWxRfIk6yuAHwS9byQCTicYnU",
             authDomain: "footballhub-cb05e.firebaseapp.com",
@@ -173,7 +189,7 @@
                     matches = data.matches || [];
                     showStatus("Data loaded successfully!");
                 } else {
-                    // Initialize empty dataset if no data exists
+                    // Initialize empty dataset
                     await db.collection("footballData").doc("stats").set({
                         players: [],
                         matches: [],
@@ -299,7 +315,7 @@
                         <div>Goals: ${player.goals}</div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="editPlayer('${player.id}')" style="padding: 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px;">Edit</button>
+                        <button onclick="editPlayerPrompt('${player.id}')" style="padding: 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px;">Edit</button>
                         <button onclick="deletePlayer('${player.id}')" style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">Delete</button>
                     </div>
                 `;
@@ -329,7 +345,7 @@
                         <button onclick="deleteMatch('${match.id}')" style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">Delete</button>
                     </div>
                     <div id="match-players-${match.id}"></div>
-                    <button onclick="addPlayerToMatch('${match.id}')" style="margin-top: 0.5rem; padding: 0.5rem; background: #5bc0de; color: white; border: none; border-radius: 4px;">+ Add Player</button>
+                    <button onclick="addPlayerToMatchPrompt('${match.id}')" style="margin-top: 0.5rem; padding: 0.5rem; background: #5bc0de; color: white; border: none; border-radius: 4px;">+ Add Player</button>
                 `;
                 container.appendChild(matchElement);
                 
@@ -418,26 +434,93 @@
             setTimeout(() => statusMessage.textContent = '', 3000);
         }
 
+        function editPlayerPrompt(playerId) {
+            const player = players.find(p => p.id === playerId);
+            if (!player) return;
+            
+            const newName = prompt("Edit player name:", player.name);
+            if (newName === null) return;
+            
+            const newGoals = prompt("Edit goals:", player.goals);
+            if (newGoals === null) return;
+            
+            player.name = newName.trim();
+            player.goals = parseInt(newGoals) || 0;
+            saveData();
+        }
+
+        function addPlayerToMatchPrompt(matchId) {
+            const match = matches.find(m => m.id === matchId);
+            if (!match) return;
+            
+            const availablePlayers = players.filter(p => 
+                !match.playerGoals.some(pg => pg.playerId === p.id)
+            );
+            
+            if (availablePlayers.length === 0) {
+                alert("All players are already in this match");
+                return;
+            }
+            
+            const playerSelect = prompt(
+                `Select player:\n${availablePlayers.map((p, i) => `${i+1}. ${p.name}`).join('\n')}`
+            );
+            
+            if (!playerSelect) return;
+            
+            const playerIndex = parseInt(playerSelect) - 1;
+            if (isNaN(playerIndex) || playerIndex < 0 || playerIndex >= availablePlayers.length) {
+                alert("Invalid selection");
+                return;
+            }
+            
+            const goals = prompt("Goals scored:", "0");
+            if (goals === null) return;
+            
+            match.playerGoals.push({
+                playerId: availablePlayers[playerIndex].id,
+                goals: parseInt(goals) || 0
+            });
+            
+            saveData();
+        }
+
+        async function deleteMatch(matchId) {
+            if (!confirm("Delete this match permanently?")) return;
+            
+            matches = matches.filter(m => m.id !== matchId);
+            await saveData();
+            showStatus("Match deleted");
+        }
+
+        // =================================
+        // Navigation
+        // =================================
+        function setupNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    // Update active state
+                    document.querySelectorAll('.nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
+                    item.classList.add('active');
+                    
+                    // Show selected page
+                    document.querySelectorAll('.page').forEach(page => {
+                        page.classList.remove('active');
+                    });
+                    document.getElementById(`${item.getAttribute('data-page')}-page`).classList.add('active');
+                });
+            });
+        }
+
         // =================================
         // Initialize App
         // =================================
         document.addEventListener('DOMContentLoaded', () => {
+            setupNavigation();
             loadData();
             setupRealTimeUpdates();
-            
-            // Navigation
-            document.querySelectorAll('[data-page]').forEach(item => {
-                item.addEventListener('click', () => {
-                    document.getElementById('players-page').style.display = 'none';
-                    document.getElementById('matches-page').style.display = 'none';
-                    document.getElementById('rankings-page').style.display = 'none';
-                    
-                    document.getElementById(`${item.getAttribute('data-page')-page`).style.display = 'block';
-                });
-            });
-            
-            // Default to players page
-            document.getElementById('players-page').style.display = 'block';
             
             // Event Listeners
             document.getElementById('add-player').addEventListener('click', addPlayer);
@@ -447,8 +530,8 @@
         // Make functions available globally for button clicks
         window.deletePlayer = deletePlayer;
         window.deleteMatch = deleteMatch;
-        window.addPlayerToMatch = addPlayerToMatch;
-        window.editPlayer = editPlayer;
+        window.addPlayerToMatchPrompt = addPlayerToMatchPrompt;
+        window.editPlayerPrompt = editPlayerPrompt;
     </script>
 </body>
 </html>
