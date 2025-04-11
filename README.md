@@ -37,12 +37,12 @@ service cloud.firestore {
   }
 }
 
-🔑 Default Login
+## 🔑 Default Login
 
 Admin password: admin123
 Change in code: const ADMIN_PASSWORD = "your-new-password";
 
-🎮 Basic Usage
+## 🎮 Basic Usage
 Add Players:
 
   Name + initial goals
@@ -60,7 +60,7 @@ View Rankings:
   Shows top 5 performers
 
 
-📜 License
+## 📜 License
 MIT License - Free for personal and commercial use
 
 
