@@ -201,6 +201,26 @@
             margin-top: 10px;
             align-items: center;
         }
+        .edit-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .edit-option-btn {
+            padding: 0.5rem;
+            background: #5bc0de;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .match-title-input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -250,7 +270,8 @@
                 <h1>Matches</h1>
                 <div class="card">
                     <h3>Add New Match</h3>
-                    <div style="display: flex; gap: 1rem;">
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <input type="text" id="match-title" placeholder="Match title (e.g., Team A vs Team B)" style="flex: 1; min-width: 300px; padding: 0.75rem;">
                         <input type="date" id="match-date" style="padding: 0.75rem;">
                         <button id="add-match" style="padding: 0.75rem 1.5rem; background: #333; color: white; border: none; border-radius: 4px;">Add Match</button>
                     </div>
@@ -368,6 +389,7 @@
                     
                     matches.forEach(match => {
                         if (!match.playerGoals) match.playerGoals = [];
+                        if (!match.title) match.title = "Match";
                     });
                     
                     showStatus("Data loaded successfully!");
@@ -420,6 +442,7 @@
                     
                     matches.forEach(match => {
                         if (!match.playerGoals) match.playerGoals = [];
+                        if (!match.title) match.title = "Match";
                     });
                     
                     renderAllData();
@@ -460,6 +483,7 @@
         }
 
         async function addMatch() {
+            const title = document.getElementById('match-title').value.trim() || "Match";
             const date = document.getElementById('match-date').value;
             if (!date) {
                 showStatus("Please select a date", true);
@@ -468,11 +492,13 @@
             
             matches.push({
                 id: Date.now().toString(),
+                title,
                 date,
                 playerGoals: []
             });
             
             await saveData();
+            document.getElementById('match-title').value = '';
             document.getElementById('match-date').value = '';
             showStatus("Match added successfully!");
         }
@@ -508,10 +534,16 @@
                         <div>Goals: ${player.goals}</div>
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button class="edit-btn" onclick="editPlayerGoals('${player.id}')" 
-                                style="padding: 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px;">
-                            Edit Goals
-                        </button>
+                        <div class="edit-options">
+                            <button class="edit-btn" onclick="showEditPlayerModal('${player.id}', 'name')" 
+                                    style="background: #5bc0de;">
+                                Edit Name
+                            </button>
+                            <button class="edit-btn" onclick="showEditPlayerModal('${player.id}', 'goals')" 
+                                    style="background: #f0ad4e;">
+                                Edit Goals
+                            </button>
+                        </div>
                         <button class="delete-btn" onclick="deletePlayer('${player.id}')" 
                                 style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
                             Delete
@@ -543,11 +575,20 @@
                 matchElement.style.marginBottom = '1rem';
                 matchElement.innerHTML = `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                        <h4>${matchDate}</h4>
-                        <button class="delete-btn" onclick="deleteMatch('${match.id}')" 
-                                style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
-                            Delete
-                        </button>
+                        <div>
+                            <h4>${match.title}</h4>
+                            <div>${matchDate}</div>
+                        </div>
+                        <div>
+                            <button class="edit-btn" onclick="showEditMatchTitleModal('${match.id}')" 
+                                    style="padding: 0.5rem; background: #5bc0de; color: white; border: none; border-radius: 4px; margin-right: 0.5rem;">
+                                Edit Title
+                            </button>
+                            <button class="delete-btn" onclick="deleteMatch('${match.id}')" 
+                                    style="padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px;">
+                                Delete
+                            </button>
+                        </div>
                     </div>
                     <div id="match-players-${match.id}"></div>
                     <button class="edit-btn" onclick="showAddPlayerModal('${match.id}')" 
@@ -580,7 +621,17 @@
                 playerElement.className = 'match-player';
                 playerElement.innerHTML = `
                     <div>${player.name}</div>
-                    <div>Goals: ${pg.goals}</div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span>Goals: ${pg.goals}</span>
+                        <button class="edit-btn" onclick="editMatchPlayerGoals('${matchId}', '${player.id}')" 
+                                style="padding: 0.25rem 0.5rem; background: #f0ad4e; color: white; border: none; border-radius: 4px; font-size: 0.8rem;">
+                            Edit
+                        </button>
+                        <button class="delete-btn" onclick="removePlayerFromMatch('${matchId}', '${player.id}')" 
+                                style="padding: 0.25rem 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px; font-size: 0.8rem;">
+                            Remove
+                        </button>
+                    </div>
                 `;
                 container.appendChild(playerElement);
             });
@@ -652,13 +703,115 @@
             setTimeout(() => statusMessage.textContent = '', 3000);
         }
 
-        function editPlayerGoals(playerId) {
+        function showEditPlayerModal(playerId, editType) {
             if (!isEditMode) return;
             
             const player = players.find(p => p.id === playerId);
             if (!player) return;
             
-            const newGoals = prompt(`Edit goals for ${player.name}:`, player.goals);
+            const modal = document.createElement('div');
+            modal.className = 'password-modal';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="password-box">
+                    <span class="close-modal-btn" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                    <h2>Edit Player ${editType === 'name' ? 'Name' : 'Goals'}</h2>
+                    <input type="${editType === 'name' ? 'text' : 'number'}" 
+                           id="edit-player-value" 
+                           value="${editType === 'name' ? player.name : player.goals}" 
+                           class="password-input"
+                           ${editType === 'goals' ? 'min="0"' : ''}>
+                    <button onclick="updatePlayer('${playerId}', '${editType}')" 
+                            class="password-btn" 
+                            style="margin-top: 1rem;">
+                        Update
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('edit-player-value').focus();
+        }
+
+        function updatePlayer(playerId, editType) {
+            const newValue = document.getElementById('edit-player-value').value;
+            const player = players.find(p => p.id === playerId);
+            
+            if (!player) return;
+            
+            if (editType === 'name') {
+                const name = newValue.trim();
+                if (!name) {
+                    showStatus("Name cannot be empty", true);
+                    return;
+                }
+                player.name = name;
+            } else {
+                const goals = parseInt(newValue);
+                if (isNaN(goals)) {
+                    showStatus("Please enter a valid number for goals", true);
+                    return;
+                }
+                player.goals = goals;
+            }
+            
+            saveData();
+            document.querySelector('.password-modal').remove();
+        }
+
+        function showEditMatchTitleModal(matchId) {
+            if (!isEditMode) return;
+            
+            const match = matches.find(m => m.id === matchId);
+            if (!match) return;
+            
+            const modal = document.createElement('div');
+            modal.className = 'password-modal';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="password-box">
+                    <span class="close-modal-btn" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                    <h2>Edit Match Title</h2>
+                    <input type="text" 
+                           id="edit-match-title" 
+                           value="${match.title}" 
+                           class="password-input">
+                    <button onclick="updateMatchTitle('${matchId}')" 
+                            class="password-btn" 
+                            style="margin-top: 1rem;">
+                        Update
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('edit-match-title').focus();
+        }
+
+        function updateMatchTitle(matchId) {
+            const newTitle = document.getElementById('edit-match-title').value.trim() || "Match";
+            const match = matches.find(m => m.id === matchId);
+            
+            if (!match) return;
+            
+            match.title = newTitle;
+            saveData();
+            document.querySelector('.password-modal').remove();
+        }
+
+        function editMatchPlayerGoals(matchId, playerId) {
+            if (!isEditMode) return;
+            
+            const match = matches.find(m => m.id === matchId);
+            if (!match) return;
+            
+            const playerGoals = match.playerGoals.find(pg => pg.playerId === playerId);
+            if (!playerGoals) return;
+            
+            const player = players.find(p => p.id === playerId);
+            if (!player) return;
+            
+            const newGoals = prompt(`Edit goals for ${player.name} in this match:`, playerGoals.goals);
             if (newGoals === null) return;
             
             const parsedGoals = parseInt(newGoals);
@@ -667,7 +820,19 @@
                 return;
             }
             
-            player.goals = parsedGoals;
+            playerGoals.goals = parsedGoals;
+            saveData();
+        }
+
+        function removePlayerFromMatch(matchId, playerId) {
+            if (!isEditMode) return;
+            
+            if (!confirm("Remove this player from the match?")) return;
+            
+            const match = matches.find(m => m.id === matchId);
+            if (!match) return;
+            
+            match.playerGoals = match.playerGoals.filter(pg => pg.playerId !== playerId);
             saveData();
         }
 
@@ -871,10 +1036,13 @@
         });
 
         // Make functions available globally
-        window.editPlayerGoals = editPlayerGoals;
+        window.showEditPlayerModal = showEditPlayerModal;
         window.deletePlayer = deletePlayer;
         window.showAddPlayerModal = showAddPlayerModal;
         window.deleteMatch = deleteMatch;
+        window.editMatchPlayerGoals = editMatchPlayerGoals;
+        window.removePlayerFromMatch = removePlayerFromMatch;
+        window.showEditMatchTitleModal = showEditMatchTitleModal;
     </script>
 </body>
 </html>
